@@ -1,0 +1,294 @@
+﻿//Autocalibration: Set remote flat and wait for 100% before use.
+// Determinate Offset
+var.Iscal = 0 // if 0 no cal, if 1 cal
+
+if var.Iscal = 0 then
+    var.xOffset = -1
+    var.yOffset = -26.19
+    var.zOffset = 1.54
+
+elseif var.Iscal = 1 then
+    if var.calibrate < 200 then
+        var.XOS = var.XOS + Wiimote.RawForceX
+        var.YOS = var.YOS - Wiimote.RawForceY
+        var.ZOS = var.ZOS + Wiimote.RawForceZ
+
+        var.xOffset = var.XOS / var.calibrate
+        var.yOffset = var.YOS / var.calibrate
+        var.zOffset = var.ZOS / var.calibrate
+
+        var.calibrate = var.calibrate + 1
+        var.calibration = var.calibrate * 100 / 200
+    endif
+
+
+endif
+
+var.xRot = Wiimote1.RawForceX + var.xOffset
+var.yRot = Wiimote1.RawForceY + var.yOffset
+var.zRot = Wiimote1.RawForceZ + var.zOffset
+
+// Suavizado del movimiento\
+var.xRot = smooth(var.xRot,5,2)
+var.yRot = smooth(var.yRot,5,2)
+var.zRot = smooth(var.zRot,5,2)
+
+// Debug window output
+//debug = " | PointerX: " + wiimote.PointerX + " | PointerY: " + wiimote.PointerY + " | PointerXY: " + wiimote.PointerXY + " | dot2y: " + wiimote.dot2y + " | dot3x: " + wiimote.dot3x + " | dot3y: " + wiimote.dot3y + " | dot4x: " + wiimote.dot4x + " | dot4y: " + wiimote.dot4y + " | dot1vis: " + wiimote.dot1vis + " | dot2vis: " + wiimote.dot2vis + " | dot3vis: " + wiimote.dot3vis + " | dot4vis: " + wiimote.dot4vis + " | PointerVisible: " + wiimote.PointerVisible
+debug = " Battery Life: " + wiimote.Battery + " | SmoothPitch: " + var.SmoothPitch + " SmoothRoll: " + var.SmoothRoll + " PointerVisible: " + wiimote.PointerVisible + " SmoothRoll: " + wiimote.Nunchuk.SmoothRoll + " SmoothPitch: " + wiimote.Nunchuk.SmoothPitch + " Shakiness: " + wiimote.Shakiness
+
+PIE.FrameRate = 100hz
+
+var.wiiup = Wiimote.Up
+var.wiileft = Wiimote.Left
+var.wiidown = Wiimote.Down
+var.wiiright = Wiimote.Right
+var.A = Wiimote.A
+var.B = wiimote.B
+var.p = Wiimote.Plus
+var.m = Wiimote.Minus
+var.1 = Wiimote.One
+var.2 = Wiimote.Two
+var.h = wiimote1.home
+var.c = Nunchuck.c
+var.z = Nunchuck.z
+var.ABZ = var.A and var.B and var.Z
+var.12 = var.1 and var.2
+var.E = Nunchuck.Up
+var.S = Nunchuck.Left
+var.D = Nunchuck.Down
+var.F = Nunchuck.Right
+
+// ======================= Wiimote ======================= 
+var.ButtonFreezeTime = 300ms
+keyboard.Up = var.wiiup and not var.Z
+keyboard.Left = var.wiileft and not var.Z
+keyboard.Down = var.wiidown and not var.Z
+keyboard.Right = var.wiiright and not var.Z
+
+keyboard.I = var.wiiup and var.Z
+keyboard.J = var.wiileft and var.Z
+keyboard.K = var.wiidown and var.Z
+keyboard.L = var.wiiright and var.Z
+
+key.1 = HeldDown(var.A,50ms) and var.Z and not var.B
+key.2 = HeldDown(var.B,50ms) and var.Z and not var.A
+key.3 = HeldDown(var.m,50ms) and var.Z
+key.4 = HeldDown(var.p,50ms) and var.Z
+key.B = var.ABZ
+
+Key.A = var.A and not var.Z
+Key.B = var.B and not var.Z
+Key.NumpadPlus = var.p and not var.Z
+key.NumpadMinus = var.m and not var.Z
+keyboard.1 = var.1
+keyboard.2 = var.2
+key.H = SingleClicked(var.h) //Map
+Key.T = var.12
+
+//key.B = var.A and var.B
+
+var.Shakiness = wiimote.Shakiness
+
+if var.Shakiness > 10 then
+   //do something
+   key.F = true
+   wait 200ms
+   key.F = false
+endif
+
+
+//Key.G = var.A and var.B
+
+if DoubleClicked(var.h) then
+   Key.G = true
+   wait 10ms
+   Key.G = false
+endif
+
+// Smooth the roll and pitch values
+var.SmoothRoll = Smooth(wiimote.SmoothRoll , 10 , 0.25)
+var.SmoothPitch = Smooth(wiimote.SmoothPitch , 10 , 0.25)
+
+// ======================= nunchuck ======================= 
+if DoubleClicked(var.c) then
+   var.1 = true
+   wait 10ms
+   var.1 = false
+endif
+
+if DoubleClicked(var.Z) then
+   var.2 = true
+   wait 10ms
+   var.2 = false
+endif
+
+if wiimote.Nunchuk.Shakiness >= 10 then
+   //do something
+   Key.Alt = true
+   wait 10ms
+   Key.Alt = false
+endif
+
+key.c = HeldDown(var.c,150ms)
+key.z = HeldDown(var.Z,150ms)
+
+// =================== Mouse movement =================== 
+var.filter_mode = 1
+
+if not wiimote.PointerVisible then
+
+    var.sensitivityGyro = [.3, .3] // Change To Higher or Lower Values to Increase or Decrease Sensitivity
+    var.deadzoneGyro = [0, 0]
+    var.Gyro = [0, 0]
+    
+    // Update Gyro values
+    if (Abs(WiiMote.MotionPlus.YawSpeed + var.calibrationGyro[1]) > var.deadzoneGyro[1]) then
+        var.Gyro[1] = RemoveUnits(WiiMote.MotionPlus.YawSpeed + var.calibrationGyro[1]) - (Sign(WiiMote.MotionPlus.YawSpeed) * var.deadzoneGyro[1])
+    endif
+    
+    if (Abs(WiiMote.MotionPlus.PitchSpeed + var.calibrationGyro[2]) > var.deadzoneGyro[2]) then
+        var.Gyro[2] = RemoveUnits(WiiMote.MotionPlus.PitchSpeed + var.calibrationGyro[2]) - (Sign(WiiMote.MotionPlus.PitchSpeed) * var.deadzoneGyro[2])
+    endif
+
+    Mouse.DirectInputX = Mouse.DirectInputX + (var.Gyro[1] * var.sensitivityGyro[1])
+    Mouse.DirectInputY = Mouse.DirectInputY + (-1 * var.Gyro[2] * var.sensitivityGyro[2])
+
+    //mouse.y = MapRange(var.SmoothPitch,32,15,0,1)
+
+elseif wiimote.PointerVisible and HeldDown(var.B,var.ButtonFreezeTime) then
+    //var.rawmousex = MapRange(Smooth(Wiimote.SmoothPointerX , 10 , 0.0018),0.1,0.9,0,1)
+    //var.rawmousey = MapRange(Smooth(Wiimote.SmoothPointerY , 10 , 0.0018),0.3,0.95,0,1)
+    var.rawmousex = MapRange(wiimote.PointerX ,-0.18,1.18,0,1)
+    var.rawmousey = MapRange(wiimote.PointerY ,0,1,0,1)
+
+    if var.filter_mode == 0 then  // no filter
+        mouse.x = var.rawmousex
+        mouse.y = var.rawmousey
+        //mouse.x = MapRange(wiimote.PointerX ,-0.09,1.14,0,1)
+        //mouse.y = MapRange(wiimote.PointerY ,0.08,1,0,1)
+
+    elseif var.filter_mode == 1 then  // Low-pass filter
+        var.alpha = 0.3
+        var.filteredmousex = var.alpha * var.filteredmousex + (1 - var.alpha) * var.rawmousex
+        var.filteredmousey = var.alpha * var.filteredmousey + (1 - var.alpha) * var.rawmousey
+
+        mouse.x = var.filteredmousex
+        //mouse.y = var.filteredmousey
+
+    elseif var.filter_mode == 2 then  // Exponential moving average (EMA)
+        var.alpha = 0.7
+        var.avgmousex = var.alpha * var.rawmousex + (1 - var.alpha) * var.avgmousex
+        var.avgmousey = var.alpha * var.rawmousey + (1 - var.alpha) * var.avgmousey
+
+        mouse.x = var.avgmousex
+        //mouse.y = var.avgmousey
+
+
+    elseif var.filter_mode == 3 then  // Dead zone
+        var.dead_zone = 0.0015
+        if abs(var.rawmousex - mouse.x) > var.dead_zone or abs(var.rawmousey - mouse.y) > var.dead_zone then
+            mouse.x = var.rawmousex
+            mouse.y = var.rawmousey
+        endif
+    endif
+endif
+
+//LED script
+/*if (wiimote1.Exists) {
+    wiimote1.Leds = var.led
+    wait 500 ms
+    var.led = (var.led + 1) % 16
+endif
+*/
+
+// ====================== Function for roll and pitch up / down ======================
+-- Set hardcoded initial values for Roll and Pitch
+if var.motion_setup < 1 then
+    var.initialRoll = 0  -- Choose a value between -20 and 20
+    var.initialPitch = 20  -- Choose a value between -20 and 20
+    var.mode = "none"
+    var.CounterUpdated = false
+    var.motion_setup = var.motion_setup + 1
+endif
+
+var.pitch0 = var.pitch1
+var.pitch1 = var.pitch2
+var.pitch2 = var.SmoothPitch
+var.avgpitch = (var.pitch0 + var.pitch1 + var.pitch2) / 3
+
+if var.c then
+    if var.mode == "none" and not var.CounterUpdated and var.Shakiness < 3.2 and abs(var.avgpitch - var.SmoothPitch) <= 0.2 then
+        if (var.SmoothRoll < 10 or var.SmoothRoll > -10) and (abs(var.SmoothPitch - var.initialPitch) >= abs(var.SmoothRoll - var.initialRoll)) and (var.SmoothPitch >= 35 or var.SmoothPitch <= -10) then
+            if var.SmoothPitch - var.initialPitch >= 30 then
+                key.Z = true
+                var.CounterUpdated = true
+                var.mode = "pitchUp"
+                var.movedPitch = var.SmoothPitch
+            elseif var.SmoothPitch - var.initialPitch <= -20 then
+                key.X = true
+                var.CounterUpdated = true
+                var.mode = "pitchDown"
+                var.movedPitch = var.SmoothPitch
+            endif
+        elseif (var.SmoothRoll > 30 or var.SmoothRoll < -30) and (var.SmoothPitch < 30 or var.SmoothPitch > 5) and wiimote.Shakiness < 3.2 then
+            if var.SmoothRoll - var.initialRoll >= 45 then
+                key.J = true
+                var.CounterUpdated = true
+                var.mode = "rollUp"
+                var.movedRoll = var.SmoothRoll
+            elseif var.SmoothRoll - var.initialRoll <= -45 then
+                key.L = true
+                var.CounterUpdated = true
+                var.mode = "rollDown"
+                var.movedRoll = var.SmoothRoll
+            endif
+        endif
+    elseif var.mode == "rollUp" and var.CounterUpdated then
+        if var.SmoothRoll - var.movedRoll <= -25 then
+            var.CounterUpdated = false
+            var.mode = "none"
+            key.J = false
+        endif
+    elseif var.mode == "rollDown" and var.CounterUpdated then
+        if var.SmoothRoll - var.movedRoll >= 25 then
+            var.CounterUpdated = false
+            var.mode = "none"
+            key.L = false
+        endif
+    elseif var.mode == "pitchUp" and var.CounterUpdated then
+        if var.SmoothPitch - var.movedPitch <= -25 then
+            var.CounterUpdated = false
+            var.mode = "none"
+            key.Z = false
+        endif
+    elseif var.mode == "pitchDown" and var.CounterUpdated then
+        if var.SmoothPitch - var.movedPitch >= 25 then
+            var.CounterUpdated = false
+            var.mode = "none"
+            key.X = false
+        endif
+    endif
+endif
+// ====================== Function for roll and pitch up / down ====================== 
+
+//===========Swing function=============//
+// Add custom variables
+var.swingDelay = 500ms
+// Detect horizontal and vertical swings with a 500ms delay
+if wiimote.Shake and (wiimote.SwingHorizontal or wiimote.SwingVertical) and not (wiimote.SwingHorizontal and wiimote.SwingVertical) then
+    if wiimote.SwingHorizontal then
+        var.SwingHorizontal = var.SwingHorizontal + 1
+    endif
+
+    if wiimote.SwingVertical then
+        var.SwingVertical = var.SwingVertical + 1
+    endif
+
+    wait var.swingDelay
+endif
+
+if wiimote.SwingLeftRight then
+   var.SwingLeftRight = var.SwingLeftRight + 1
+endif
+//===========Swing function=============//
